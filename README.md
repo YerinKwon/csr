@@ -2,8 +2,8 @@
 
 ## About   
 simple csr graph implementation and dfs,bfs,pagerank on it.   
-CSR.cpp : implementation.
-input.txt : sample graph with 10 vertices and 30 edges.
+CSR.cpp : implementation.    
+input.txt : sample graph with 10 vertices and 30 edges.   
 
 ## How to run   
     g++ -std=c++14 CSR.cpp -o CSR
