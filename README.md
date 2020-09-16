@@ -10,17 +10,24 @@ input.txt : sample graph with 10 vertices and 30 edges.
     ./CSR
     
 ## Result   
-Node 1: 2 3 10    
-Node 2: 3 4 5 9    
-Node 3: 2 8 9    
-Node 4: 1 2 5 6 9 10    
-Node 5: 3 6 8    
-Node 6:    
-Node 7: 4 9    
-Node 8: 2    
-Node 9: 1 2 3 7    
-Node 10: 1 3 6 7    
 
-BFS result (from 1): 1 2 3 10 4 5 9 8 6 7    
-DFS result (from 1): 1 2 3 8 9 7 4 5 6 10    
-PageRank result: 1:0.054959 2:0.144427 3:0.107555 4:0.065127 5:0.054917 6:0.048243 7:0.045733 8:0.061034 9:0.104828 10:0.039798    
+### Output Example: 10 vertices 30 edges   
+Node 0: 1 2 9 
+Node 1: 2 3 4 8 
+Node 2: 1 7 8 
+Node 3: 0 1 4 5 8 9 
+Node 4: 2 5 7 
+Node 5: 
+Node 6: 3 8 
+Node 7: 1 
+Node 8: 0 1 2 6 
+Node 9: 0 2 5 6 
+
+BFS result (from 0): 0 1 2 9 3 4 8 7 5 6 
+DFS result (from 0): 0 1 2 7 8 6 3 4 5 9 
+PageRank result: 0:0.075637 1:0.198765 2:0.148021 3:0.089630 4:0.075579 5:0.066394 6:0.062939 7:0.083997 8:0.144267 9:0.054772 
+
+-Benchmark-
+BFS: 0.000011
+DFS: 0.000010
+PageRank: 0.000067

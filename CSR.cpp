@@ -7,6 +7,8 @@
 #include <cmath>
 #include <memory.h>
 
+#include "timer.h"
+
 #define DF 0.85
 #define TOLERANCE 0.0000001
 typedef std::pair<int,int> Edge;
@@ -33,7 +35,7 @@ struct CSRGraph{
     std::vector<int> BFS(int start);
     std::vector<int> DFS(int start);
     std::vector<double> PageRank();
-    void printCSRGraph();
+    void printCSRGraph(bool showResult);
 };
 
 std::vector<int> CSRGraph::BFS(int start){
@@ -97,12 +99,16 @@ std::vector<double> CSRGraph::PageRank(){
     double tmp[numNode];
     do{
         tol = 0;
-        for(int i=0;i<numNode;++i) tmp[i] = 0;
+        double noLink = 0;
+        memset(tmp, 0, sizeof(tmp));
         for(int i=0;i<numNode;++i){
-            tmp[i] += (1-DF)/numNode;
-            for(int j=idx[i];j<idx[i+1];++j) tmp[nodelist[j]] += DF*rank[i]/(idx[i+1]-idx[i]);
+            if(idx[i+1] == idx[i]) noLink += rank[i];
+            for(int j=idx[i];j<idx[i+1];++j) {
+                tmp[nodelist[j]] += rank[i]/(idx[i+1]-idx[i]);
+            }
         }
         for(int i=0;i<numNode;++i) {
+            tmp[i] = (1-DF)/numNode + DF*(tmp[i] + noLink/numNode);
             tol += std::abs(rank[i]-tmp[i]);
             rank[i] = tmp[i];
         }
@@ -110,40 +116,63 @@ std::vector<double> CSRGraph::PageRank(){
     return rank;
 }
 
-void CSRGraph::printCSRGraph(){
+void CSRGraph::printCSRGraph(bool showResult){
         for(int i=0; i < numNode; ++i){
-            printf("Node %d: ",i+1);
-            for(int j=idx[i];j<idx[i+1];++j) printf("%d ",nodelist[j]+1);
+            printf("Node %d: ",i);
+            for(int j=idx[i];j<idx[i+1];++j) printf("%d ",nodelist[j]);
             printf("\n");
         }
         printf("\n");
-        
+
+        Timer t;
+        double bfsT=0, dfsT=0, prT=0;
+        t.Start();
         std::vector<int> bfs = BFS(1);
+        t.Stop();
+        bfsT = t.Seconds();
+
+        t.Start();
         std::vector<int> dfs = DFS(1);
+        t.Stop();
+        dfsT = t.Seconds();
+
+        t.Start();
         std::vector<double> pagerank = PageRank(); 
+        t.Stop();
+        prT = t.Seconds();
 
-        printf("BFS result (from 1): ");
-        for(int i=0;i<bfs.size();++i) printf("%d ",bfs[i]+1);
-        printf("\n");
+        if(showResult){
+            printf("BFS result (from 0): ");
+            for(int i=0;i<bfs.size();++i) printf("%d ",bfs[i]);
+            printf("\n");
 
-        printf("DFS result (from 1): ");
-        for(int i=0;i<bfs.size();++i) printf("%d ",dfs[i]+1);
-        printf("\n");
+            printf("DFS result (from 0): ");
+            for(int i=0;i<bfs.size();++i) printf("%d ",dfs[i]);
+            printf("\n");
 
-        printf("PageRank result: ");
-        for(int i=0;i<numNode;++i) printf("%d:%lf ",i+1,pagerank[i]);
-        printf("\n");
+            printf("PageRank result: ");
+            double sum = 0;
+            for(int i=0;i<numNode;++i) {
+                printf("%d:%lf ",i,pagerank[i]);
+                sum += pagerank[i];
+            }
+            // printf("\nsum: %lf",sum);
+            printf("\n");
+        }
+
+        printf("\n-Benchmark-\n");
+        printf("BFS: %lf\nDFS: %lf\nPageRank: %lf\n",bfsT,dfsT,prT);
     }
 
 int main(){    
     freopen("input.txt","rt",stdin);
 
     int a,b,n;
-    scanf("%d",&n);  //# of vertices (1~n)
+    scanf("%d",&n);  //# of vertices (0~n-1)
     std::vector<Edge> edgelist;
-    while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a-1,b-1});
+    while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
     sort(edgelist.begin(),edgelist.end());
 
     CSRGraph g(n,edgelist);
-    g.printCSRGraph();
+    g.printCSRGraph(true);
 }
