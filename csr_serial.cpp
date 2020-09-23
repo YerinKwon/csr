@@ -168,15 +168,10 @@ void CSRGraph::printCSRGraph(bool showGraph, bool showResult, int iter){
 }
 
 int main(int argc, char **argv){    
-    /*
-        input format
-        ./CSR [input file path] [show graph (0/1)] [show result(0/1)] [# of iteration (recomment 1 when showing result)]
-    */
-
     freopen(argv[1],"rt",stdin);
 
     int a,b,n;
-    scanf("%d",&n);  //# of vertices (0~n-1)
+    scanf("%d",&n);
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
     sort(edgelist.begin(),edgelist.end());
