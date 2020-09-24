@@ -22,15 +22,16 @@ double* pPageRank(CSRGraph &g){
         double noLink = 0;
         #pragma omp parallel for reduction(+:noLink)
         for(int i=0;i<g.num_node();++i) {
-            if(g.outidx(i+1) == g.outidx(i)) tmp[i]=0;
-            else tmp[i] = rank[i]/(g.outidx(i+1)-g.outidx(i));
+            int outdegree = g.outidx(i+1) - g.outidx(i);
+            if(outdegree == 0) noLink += rank[i];
+            else tmp[i] = rank[i]/outdegree;
         }
         #pragma omp parallel for reduction(+:tol)
         for(int i=0;i<g.num_node();++i){
             double total_in = 0;
             for(int j=g.inidx(i);j<g.inidx(i+1);++j) total_in += tmp[g.innodelist(j)];
             double old_rank = rank[i];
-            rank[i] = (1-DF)/g.num_node() + DF*(total_in + noLink/g.num_node());
+            rank[i] = (1.0-DF)/g.num_node() + DF*(total_in + noLink/g.num_node());
             tol += std::abs(rank[i]-old_rank);
         }
     } while (tol > TOLERANCE);
@@ -63,6 +64,7 @@ int main(int argc, char **argv){
         t.Start();
         pagerank = pPageRank(g);
         t.Stop();
+        printf("%lf\n",t.Seconds());
         avg_time += t.Seconds();
     }
 
@@ -75,6 +77,9 @@ int main(int argc, char **argv){
         for(int i=0;i<std::min(10,g.num_node());++i) printf("%d(%lf) ",pr[i].second, pr[i].first);
         printf("\n");
     }
+    // double sum = 0;
+    // for(int i=0;i<g.num_node();++i) sum += pagerank[i];
+    // printf("%lf\n",sum);
 
     // benchmark
     printf("Benchmark: %lf\n",avg_time/iteration);

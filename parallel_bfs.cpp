@@ -32,7 +32,7 @@ int bottomUp(CSRGraph &g,int* parent, Bitmap &prev, Bitmap &cur){
     cur.reset();
     #pragma omp parallel for reduction(+: awakecnt)
     for(int u=0; u<g.num_node(); ++u){
-        if(parent[u] < 0){ //not visited
+        if(parent[u] < 0){
             for(int j = g.inidx(u); j < g.inidx(u+1); ++j){
                 int v = g.innodelist(j);
                 if(prev.isSet(v)){
@@ -86,7 +86,6 @@ int* pBFS(CSRGraph &g ,int start, int alpha = 15, int beta = 18){
     int remainingEdge = g.nodelist_size();
     int outcnt = g.outidx(start+1)-g.outidx(start);
 
-    //ok
     while(!sq.empty()){
         if(outcnt > remainingEdge / alpha){
             // BU
@@ -141,6 +140,8 @@ int main(int argc, char **argv){
         t.Start();
         bfs = pBFS(g,0);
         t.Stop();
+        printf("%lf\n",t.Seconds());
+        delete bfs;
         avg_time += t.Seconds();
     }
 
