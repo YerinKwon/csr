@@ -10,31 +10,33 @@
 #define TOLERANCE 0.0001
 
 double* pPageRank(CSRGraph &g){
+    double init_score = 1.0f / g.num_node();
+    double base_score = (1.0f-DF) / g.num_node();
+
     double* rank = new double[g.num_node()];
+    double* tmp = new double[g.num_node()];
 
     #pragma omp parallel for
-    for(int i=0;i<g.num_node();++i) rank[i] = 1.0/g.num_node();
+    for(int i=0;i<g.num_node();++i) rank[i] = init_score;
 
-    double tol;
-    double tmp[g.num_node()];
-    do{
-        tol = 0;
-        double noLink = 0;
-        #pragma omp parallel for reduction(+:noLink)
-        for(int i=0;i<g.num_node();++i) {
-            int outdegree = g.outidx(i+1) - g.outidx(i);
-            if(outdegree == 0) noLink += rank[i];
-            else tmp[i] = rank[i]/outdegree;
-        }
+    for(int iter = 0;iter < 20; iter++){ //default max iter : 20
+        double tol = 0;
+        #pragma omp parallel for
+        for(int i=0;i<g.num_node();++i)
+            tmp[i] = rank[i]/(g.outidx(i+1) - g.outidx(i));
+
         #pragma omp parallel for reduction(+:tol)
         for(int i=0;i<g.num_node();++i){
             double total_in = 0;
-            for(int j=g.inidx(i);j<g.inidx(i+1);++j) total_in += tmp[g.innodelist(j)];
+            for(int j=g.inidx(i);j<g.inidx(i+1);++j) 
+                total_in += tmp[g.innodelist(j)];
             double old_rank = rank[i];
-            rank[i] = (1.0-DF)/g.num_node() + DF*(total_in + noLink/g.num_node());
+            rank[i] = (1.0-DF)/g.num_node() + DF*total_in;
             tol += std::abs(rank[i]-old_rank);
         }
-    } while (tol > TOLERANCE);
+        if(tol < TOLERANCE) break;
+    }
+    delete[] tmp;
     return rank;
 }
 
@@ -60,6 +62,7 @@ int main(int argc, char **argv){
     Timer t;
     double avg_time = 0;
     double *pagerank;
+
     for(int i = 0; i<iteration; ++i){
         t.Start();
         pagerank = pPageRank(g);
@@ -77,9 +80,6 @@ int main(int argc, char **argv){
         for(int i=0;i<std::min(10,g.num_node());++i) printf("%d(%lf) ",pr[i].second, pr[i].first);
         printf("\n");
     }
-    // double sum = 0;
-    // for(int i=0;i<g.num_node();++i) sum += pagerank[i];
-    // printf("%lf\n",sum);
 
     // benchmark
     printf("Benchmark: %lf\n",avg_time/iteration);
