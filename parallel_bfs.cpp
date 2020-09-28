@@ -11,8 +11,7 @@ int topDown(CSRGraph &g,int* parent, SlidingQ &sq){
         #pragma omp for reduction(+: outcnt)
         for(int i = sq.start(); i<sq.end(); ++i){
             int u = sq.get(i);
-            for(int j = g.outidx(u);j<g.outidx(u+1);++j){
-                int v = g.outnodelist(j);
+            for(int v:g.out_neigh(u)){
                 int cur_val = parent[v];
                 if(cur_val < 0){
                     if(__sync_bool_compare_and_swap(&parent[v], cur_val, u)){
@@ -21,6 +20,16 @@ int topDown(CSRGraph &g,int* parent, SlidingQ &sq){
                     }
                 }
             }
+            // for(int j = g.outidx(u);j<g.outidx(u+1);++j){ //HERE
+            //     int v = g.outnodelist(j);
+            //     int cur_val = parent[v];
+            //     if(cur_val < 0){
+            //         if(__sync_bool_compare_and_swap(&parent[v], cur_val, u)){
+            //             lq.push_back(v);
+            //             outcnt += -cur_val;
+            //         }
+            //     }
+            // }
         }
         lq.flush();
     }
@@ -33,7 +42,7 @@ int bottomUp(CSRGraph &g,int* parent, Bitmap &prev, Bitmap &cur){
     #pragma omp parallel for reduction(+: awakecnt)
     for(int u=0; u<g.num_node(); ++u){
         if(parent[u] < 0){
-            for(int j = g.inidx(u); j < g.inidx(u+1); ++j){
+            for(int j = g.inidx(u); j < g.inidx(u+1); ++j){ //HERE
                 int v = g.innodelist(j);
                 if(prev.isSet(v)){
                     parent[u] = v;
@@ -98,7 +107,7 @@ int* pBFS(CSRGraph &g ,int start, int alpha = 15, int beta = 18){
                 prev.swap(cur);
             }while( awakecnt >= prevawakecnt || awakecnt > g.num_node()/beta );
             BitmapToQ(g, prev,sq);
-            outcnt = 1; //?????
+            outcnt = 1;
         }else{
             // TD
             remainingEdge -= outcnt;
