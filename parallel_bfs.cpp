@@ -3,16 +3,17 @@
 #include "bitmap.h"
 #include "timer.h"
 
-int topDown(CSRGraph &g,int* parent, SlidingQ &sq){
-    int outcnt = 0;
+int64_t topDown(CSRGraph &g,Node* parent, SlidingQ<Node> &sq){
+    int64_t outcnt = 0;
     #pragma omp parallel
     {
-        Qbuffer lq(sq);
+        Qbuffer<Node> lq(sq);
         #pragma omp for reduction(+: outcnt)
-        for(int i = sq.start(); i<sq.end(); ++i){
-            int u = sq.get(i);
-            for(int v:g.out_neigh(u)){
-                int cur_val = parent[v];
+        for(auto i = sq.begin(); i != sq.end(); ++i){
+            Node u = *i;
+            for(auto j = g.out_idx(u), jend = g.out_idx(u+1); j != jend; ++j){
+                Node v = *j;
+                Node cur_val = parent[v];
                 if(cur_val < 0){
                     if(__sync_bool_compare_and_swap(&parent[v], cur_val, u)){
                         lq.push_back(v);
@@ -20,30 +21,20 @@ int topDown(CSRGraph &g,int* parent, SlidingQ &sq){
                     }
                 }
             }
-            // for(int j = g.outidx(u);j<g.outidx(u+1);++j){ //HERE
-            //     int v = g.outnodelist(j);
-            //     int cur_val = parent[v];
-            //     if(cur_val < 0){
-            //         if(__sync_bool_compare_and_swap(&parent[v], cur_val, u)){
-            //             lq.push_back(v);
-            //             outcnt += -cur_val;
-            //         }
-            //     }
-            // }
         }
         lq.flush();
     }
     return outcnt;
 }
 
-int bottomUp(CSRGraph &g,int* parent, Bitmap &prev, Bitmap &cur){
-    int awakecnt = 0;
+int64_t bottomUp(CSRGraph &g,Node* parent, Bitmap &prev, Bitmap &cur){
+    int64_t awakecnt = 0;
     cur.reset();
-    #pragma omp parallel for reduction(+: awakecnt)
-    for(int u=0; u<g.num_node(); ++u){
+    #pragma omp parallel for reduction(+: awakecnt) schedule(dynamic, 1024)
+    for(Node u=0; u<g.num_node(); ++u){
         if(parent[u] < 0){
-            for(int j = g.inidx(u); j < g.inidx(u+1); ++j){ //HERE
-                int v = g.innodelist(j);
+            for(auto j = g.in_idx(u),jend = g.in_idx(u+1); j != jend; ++j){
+                Node v = *j;
                 if(prev.isSet(v)){
                     parent[u] = v;
                     awakecnt++;
@@ -56,36 +47,40 @@ int bottomUp(CSRGraph &g,int* parent, Bitmap &prev, Bitmap &cur){
     return awakecnt;
 }
 
-void QToBitmap(SlidingQ &sq, Bitmap &bm){
+void QToBitmap(SlidingQ<Node> &sq, Bitmap &bm){
     #pragma omp parallel for
-    for(int i=sq.start(); i<sq.end(); ++i) {
-        int n = sq.get(i);
+    for(auto i=sq.begin(); i<sq.end(); ++i) {
+        Node n = *i;
         bm.setBitAtomic(n);
     }
 }
 
-void BitmapToQ(CSRGraph &g,Bitmap &bm, SlidingQ &sq){
+void BitmapToQ(CSRGraph &g,Bitmap &bm, SlidingQ<Node> &sq){
     #pragma omp parallel
     {
-        Qbuffer lq(sq);
+        Qbuffer<Node> lq(sq);
         #pragma omp for
-        for(int i=0;i<g.num_node();++i)
+        for(Node i=0;i<g.num_node();++i)
             if(bm.isSet(i)) lq.push_back(i);
         lq.flush();
     }
     sq.slide();
 }
 
-int* pBFS(CSRGraph &g ,int start, int alpha = 15, int beta = 18){
-    int* parent = new int[g.num_node()];
+int* pBFS(CSRGraph &g ,Node start, int alpha = 15, int beta = 18){
+    Timer t;
+
+    t.Start();
+    Node* parent = new Node[g.num_node()];
     #pragma omp parallel for
-    for(int i=0;i<g.num_node();++i){
-        int cnt = g.outidx(i+1)-g.outidx(i);
-        parent[i] = cnt > 0 ? -cnt:-1;
+    for(Node i=0;i<g.num_node();++i){
+        parent[i] = g.out_degree(i) != 0 ? -g.out_degree(i) : -1;
     }
+    t.Stop();
+    printf("i\t\t%lf\n",t.Seconds());
 
     parent[start] = start;
-    SlidingQ sq(g.num_node());
+    SlidingQ<Node> sq(g.num_node());
     sq.push_back(start);
     sq.slide();
     
@@ -93,26 +88,38 @@ int* pBFS(CSRGraph &g ,int start, int alpha = 15, int beta = 18){
     prev.reset(), cur.reset();
 
     int remainingEdge = g.nodelist_size();
-    int outcnt = g.outidx(start+1)-g.outidx(start);
+    int outcnt = g.out_degree(start);
 
     while(!sq.empty()){
         if(outcnt > remainingEdge / alpha){
             // BU
+            t.Start();
             QToBitmap(sq,prev);
+            t.Stop();
+            printf("e\t\t%lf\n",t.Seconds());
             int prevawakecnt, awakecnt = sq.size();
             sq.slide();
             do{
+                t.Start();
                 prevawakecnt = awakecnt;
                 awakecnt = bottomUp(g, parent, prev, cur);
                 prev.swap(cur);
+                t.Stop();
+                printf("bu\t%d\t%lf\n",awakecnt,t.Seconds());
             }while( awakecnt >= prevawakecnt || awakecnt > g.num_node()/beta );
+            t.Start();
             BitmapToQ(g, prev,sq);
+            t.Stop();
+            printf("c\t\t%lf\n",t.Seconds());
             outcnt = 1;
         }else{
             // TD
+            t.Start();
             remainingEdge -= outcnt;
             outcnt = topDown(g, parent, sq);
             sq.slide();
+            t.Stop();
+            printf("td\t%d\t%lf\n",sq.size(),t.Seconds());
         }
     }
 
@@ -132,14 +139,13 @@ int main(int argc, char **argv){
     int iteration = *argv[4] - '0';
 
     // graph generation
-    int a,b,n;
-    scanf("%d",&n);  //# of vertices (0~n-1)
+    int a,b;
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
-    CSRGraph g(n,edgelist);
+    CSRGraph g(edgelist);
     
     // print graph (option)
-    if(print_graph) g.printCSRGraph();
+    // if(print_graph) g.printCSRGraph();
     
     // run pagerank
     Timer t;
@@ -149,7 +155,7 @@ int main(int argc, char **argv){
         t.Start();
         bfs = pBFS(g,0);
         t.Stop();
-        printf("%lf\n",t.Seconds());
+        printf("Trial Time:\t%lf\n",t.Seconds());
         delete bfs;
         avg_time += t.Seconds();
     }
