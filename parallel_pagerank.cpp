@@ -2,14 +2,18 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
+#include <cstdlib>
 
 #include "csrgraph.h"
 #include "timer.h"
 
+typedef int32_t Node;
+typedef std::pair<Node, Node> Edge;
+
 const float DF = 0.85;
 const double TOLERANCE = 0.0001;
 
-float* pPageRank(CSRGraph &g){
+float* pPageRank(CSRGraph<Node> &g){
     float init_score = 1.0f / g.num_node();
     float base_score = (1.0f-DF) / g.num_node();
 
@@ -58,14 +62,13 @@ int main(int argc, char **argv){
 
     // command line parsing
     freopen(argv[1],"rt",stdin);
-    bool print_graph = *argv[2] - '0', print_result =  *argv[3] - '0';
-    int iteration = *argv[4] - '0';
+    int iteration = atoi(argv[2]);
 
     // graph generation
     int a,b;
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
-    CSRGraph g(edgelist);
+    CSRGraph<Node> g(edgelist);
     
     // run pagerank
     Timer t;
@@ -81,14 +84,14 @@ int main(int argc, char **argv){
     }
 
     // print result (option)
-    if(print_result){
-        printf("result (top 10): ");
-        std::pair<float, int> pr[g.num_node()];
-        for(int i=0;i<g.num_node();++i) pr[i] = {pagerank[i],i};
-        std::sort(pr, pr+g.num_node(), std::greater<std::pair<double,int>>());
-        for(int i=0;i<10;++i) printf("%d(%lf) ",pr[i].second, pr[i].first);
-        printf("\n");
-    }
+    // if(print_result){
+    //     printf("result (top 10): ");
+    //     std::pair<float, int> pr[g.num_node()];
+    //     for(int i=0;i<g.num_node();++i) pr[i] = {pagerank[i],i};
+    //     std::sort(pr, pr+g.num_node(), std::greater<std::pair<double,int>>());
+    //     for(int i=0;i<10;++i) printf("%d(%lf) ",pr[i].second, pr[i].first);
+    //     printf("\n");
+    // }
 
     // benchmark
     printf("Benchmark: %lf\n",avg_time/iteration);

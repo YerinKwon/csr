@@ -8,11 +8,12 @@
 #include <iostream>
 #include <type_traits>
 
-typedef int32_t Node;
 typedef int64_t Offset;
-typedef std::pair<Node, Node> Edge;
 
+template <typename Node>
 class CSRGraph{
+    typedef std::pair<Node,Node> Edge;
+
     int64_t num_node_;
     int64_t nodelist_size_;
     Node** out_idx_;

@@ -1,9 +1,14 @@
+#include <cstdlib>
+
 #include "csrgraph.h"
 #include "sliding_q.h"
 #include "bitmap.h"
 #include "timer.h"
 
-int64_t topDown(CSRGraph &g,Node* parent, SlidingQ<Node> &sq){
+typedef int32_t Node;
+typedef std::pair<Node, Node> Edge;
+
+int64_t topDown(CSRGraph<Node> &g,Node* parent, SlidingQ<Node> &sq){
     int64_t outcnt = 0;
     #pragma omp parallel
     {
@@ -27,7 +32,7 @@ int64_t topDown(CSRGraph &g,Node* parent, SlidingQ<Node> &sq){
     return outcnt;
 }
 
-int64_t bottomUp(CSRGraph &g,Node* parent, Bitmap &prev, Bitmap &cur){
+int64_t bottomUp(CSRGraph<Node> &g,Node* parent, Bitmap &prev, Bitmap &cur){
     int64_t awakecnt = 0;
     cur.reset();
     #pragma omp parallel for reduction(+: awakecnt) schedule(dynamic, 1024)
@@ -55,7 +60,7 @@ void QToBitmap(SlidingQ<Node> &sq, Bitmap &bm){
     }
 }
 
-void BitmapToQ(CSRGraph &g,Bitmap &bm, SlidingQ<Node> &sq){
+void BitmapToQ(CSRGraph<Node> &g,Bitmap &bm, SlidingQ<Node> &sq){
     #pragma omp parallel
     {
         Qbuffer<Node> lq(sq);
@@ -67,9 +72,9 @@ void BitmapToQ(CSRGraph &g,Bitmap &bm, SlidingQ<Node> &sq){
     sq.slide();
 }
 
-int* pBFS(CSRGraph &g ,Node start, int alpha = 15, int beta = 18){
+int* pBFS(CSRGraph<Node> &g ,Node start, int alpha = 15, int beta = 18){
+    printf("Source:\t\t%d\n",start);
     Timer t;
-
     t.Start();
     Node* parent = new Node[g.num_node()];
     #pragma omp parallel for
@@ -135,17 +140,13 @@ int main(int argc, char **argv){
 
     // command line parsing
     freopen(argv[1],"rt",stdin);
-    bool print_graph = *argv[2] - '0', print_result =  *argv[3] - '0';
-    int iteration = *argv[4] - '0';
+    int iteration = atoi(argv[2]);
 
     // graph generation
     int a,b;
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
-    CSRGraph g(edgelist);
-    
-    // print graph (option)
-    // if(print_graph) g.printCSRGraph();
+    CSRGraph<Node> g(edgelist);
     
     // run pagerank
     Timer t;
@@ -158,13 +159,6 @@ int main(int argc, char **argv){
         printf("Trial Time:\t%lf\n",t.Seconds());
         delete bfs;
         avg_time += t.Seconds();
-    }
-
-    // print result (option)
-    if(print_result){
-        printf("result (from 0): ");
-        for(int i=0;i<g.num_node();++i) printf("%d ",bfs[i]);
-        printf("\n");
     }
 
     // benchmark
