@@ -52,8 +52,7 @@ DFS: 0.000010
 PageRank: 0.000047   
 
 ### Benchmark    
-Benchmark and comparison.    
-*10 iteration    
+Benchmark and comparison (parallel implementation vs gapbs).    
 
 
 
