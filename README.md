@@ -15,11 +15,11 @@ parallel implementations are simplified version of [gapbs](https://github.com/sb
 
 ### parallel bfs   
     g++ -fopenmp -std=c++14 parallel_bfs.cpp -o bfs.out   
-    ./bfs.out [input file path] [show graph (0/1)] [show result (0/1)] [iteration (0~9)]   
+    ./bfs.out [input file path] [iteration (int)]   
 
 ### parallel pagerank   
     g++ -fopenmp -std=c++14 parallel_pagerank.cpp -o pagerank.out   
-    ./pagerank.out [input file path] [show graph (0/1)] [show result (0/1)] [iteration (0~9)]   
+    ./pagerank.out [input file path] [iteration (int)]   
 
 
 show graph: print each node line by line with its neighbors.   
@@ -53,18 +53,8 @@ PageRank: 0.000047
 
 ### Benchmark    
 Benchmark and comparison.    
-
-*num node : 1024    
 *10 iteration    
-        					
-avg degree of node | 2 | 10 | 100 | 200 | 500 | 1000   
----|---|---|---|---|---|---   
-bfs (serial) | 0.00007 | 0.000119 | 0.000442 | 0.000802 | 0.00188 | 0.003661   
-pagerank (serial) | 0.001302 | 0.001582 | 0.006739 | 0.01136 | 0.023237 | 0.027871   
-dfs (serial) | 0.00009 | 0.000157 | 0.000662 | 0.001224 | 0.002888 | 0.005695   
-bfs (parallel) | 0.00026 | 0.000162 | 0.000079 | 0.000086 | 0.000103 | 0.000111   
-pagerank (parallel) | 0.00025 | 0.000349 | 0.000796 | 0.001584 | 0.00248 | 0.003124   
-bfs (gapbs) | 0.00029 | 0.00024 | 0.00019 | 0.00017 | 0.00009 | 0.0001   
-pagerank (gapbs) | 0.00036 | 0.00041 | 0.00024 | 0.0003 | 0.00036 | 0.00054   
+
+
 
 ![benchmark](./img/benchmark.png)

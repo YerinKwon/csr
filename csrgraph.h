@@ -21,6 +21,23 @@ class CSRGraph{
     Node** in_idx_;
     Node* in_nodelist_;
 
+    typedef std::make_unsigned<std::ptrdiff_t>::type OffsetT;
+
+    class Neighborhood {
+        Node n_;
+        Node** g_index_;
+        OffsetT start_offset_;
+    public:
+        Neighborhood(Node n, Node** g_index, OffsetT start_offset) :
+            n_(n), g_index_(g_index), start_offset_(0) {
+            OffsetT max_offset = end() - begin();
+            start_offset_ = std::min(start_offset, max_offset);
+        }
+        typedef Node* iterator;
+        iterator begin() { return g_index_[n_] + start_offset_; }
+        iterator end()   { return g_index_[n_+1]; }
+    };
+
     Node find_max_node(std::vector<Edge> &el){
         Node max_node = 0;
         #pragma omp parallel for reduction(max: max_node)
@@ -97,7 +114,7 @@ class CSRGraph{
     }
 
 public:
-    CSRGraph(std::vector<Edge> &el){
+    CSRGraph(std::vector<Edge> &&el){
         nodelist_size_ = el.size();
         num_node_ =  find_max_node(el)+1;
 
@@ -124,6 +141,13 @@ public:
     int64_t in_degree(Node n) const { return in_idx_[n+1]-in_idx_[n];}
     Node* out_idx(Node n){ return out_idx_[n];}
     Node* in_idx(Node n){ return in_idx_[n];}
+    Neighborhood out_neigh(Node n, OffsetT start_offset = 0) const {
+        return Neighborhood(n, out_idx_, start_offset);
+    }
+
+    Neighborhood in_neigh(Node n, OffsetT start_offset = 0) const {
+        return Neighborhood(n, in_idx_, start_offset);
+    }
 };
 
 #endif

@@ -40,10 +40,11 @@ float* pPageRank(CSRGraph<Node> &g){
         #pragma omp parallel for reduction(+:tol) schedule(dynamic, 64)
         for(Node i=0;i<g.num_node();++i){
             float total_in = 0;
-            for(Node* it = g.in_idx(i), *end = g.in_idx(i+1); it!=end;it++){
-                Node v = *it;
+            // for(Node *it = g.in_idx(i), *end = g.in_idx(i+1); it != end; ++it){
+            //     total_in += tmp[*it];
+            // }
+            for(Node v: g.in_neigh(i))
                 total_in += tmp[v];
-            }
             float old_rank = rank[i];
             rank[i] = base_score + DF*total_in;
             tol += std::fabs(rank[i]-old_rank);
@@ -68,19 +69,20 @@ int main(int argc, char **argv){
     int a,b;
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
-    CSRGraph<Node> g(edgelist);
+    CSRGraph<Node> g(std::move(edgelist));
     
     // run pagerank
     Timer t;
-    double avg_time = 0;
+    double avg_time = 0, max_time=0, min_time=99999;
     float *pagerank;
-
     for(int i = 0; i<iteration; ++i){
         t.Start();
         pagerank = pPageRank(g);
         t.Stop();
         printf("Trial Time: \t%lf\n",t.Seconds());
         avg_time += t.Seconds();
+        max_time = std::max(max_time, t.Seconds());
+        min_time = std::min(min_time, t.Seconds());
     }
 
     // print result (option)
@@ -94,5 +96,7 @@ int main(int argc, char **argv){
     // }
 
     // benchmark
+    printf("Min time: %lf\n", min_time);
+    printf("Max time: %lf\n", max_time);
     printf("Benchmark: %lf\n",avg_time/iteration);
 }

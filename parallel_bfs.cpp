@@ -146,11 +146,11 @@ int main(int argc, char **argv){
     int a,b;
     std::vector<Edge> edgelist;
     while(scanf("%d %d",&a,&b)!=-1) edgelist.push_back({a,b});
-    CSRGraph<Node> g(edgelist);
+    CSRGraph<Node> g(std::move(edgelist));
     
     // run pagerank
     Timer t;
-    double avg_time = 0;
+    double avg_time = 0, max_time=0, min_time=99999;
     int *bfs;
     for(int i = 0; i<iteration; ++i){
         t.Start();
@@ -159,8 +159,12 @@ int main(int argc, char **argv){
         printf("Trial Time:\t%lf\n",t.Seconds());
         delete bfs;
         avg_time += t.Seconds();
+        max_time = std::max(max_time, t.Seconds());
+        min_time = std::min(min_time, t.Seconds());
     }
 
     // benchmark
+    printf("Min time: %lf\n", min_time);
+    printf("Max time: %lf\n", max_time);
     printf("Benchmark: %lf\n",avg_time/iteration);
 }
